@@ -1,0 +1,75 @@
+#cloud-config
+# Shared bootstrap for both the Oracle primary and GCP standby VMs. Installs
+# only what's needed to join the *existing* pantry-bot deploy pipeline
+# (GHCR + Watchtower) and the failover mechanics (cloudflared, litestream) —
+# it does not install or configure the bot itself. See
+# docs/DEPLOYMENT-PIPELINE-IMPACT.md for why this split matters.
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+
+write_files:
+  - path: /etc/pantry-bot/role
+    content: "${role}"
+    permissions: "0644"
+
+runcmd:
+  # Docker Engine (official repo, works on both Ubuntu x86_64 and arm64)
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - >
+    echo "deb [arch=$(dpkg --print-architecture)
+    signed-by=/etc/apt/keyrings/docker.asc]
+    https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo
+    $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update -y
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  - systemctl enable --now docker
+
+  # cloudflared — joins the existing Tunnel as an additional replica. The
+  # tunnel token is injected as a Docker env var, never baked into the image
+  # or this cloud-init file.
+  - mkdir -p /opt/pantry-bot
+  - |
+    cat > /opt/pantry-bot/docker-compose.yml <<'EOF'
+    services:
+      cloudflared:
+        image: cloudflare/cloudflared:latest
+        restart: unless-stopped
+        command: tunnel run
+        environment:
+          - TUNNEL_TOKEN=${cloudflare_tunnel_token}
+
+      watchtower:
+        image: containrrr/watchtower
+        restart: unless-stopped
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+        command: --interval 60 --cleanup
+
+      litestream:
+        image: litestream/litestream:latest
+        restart: unless-stopped
+        volumes:
+          - pantry-data:/data
+        command: replicate
+        environment:
+          - LITESTREAM_ACCESS_KEY_ID=${litestream_access_key_id}
+          - LITESTREAM_SECRET_ACCESS_KEY=${litestream_secret_access_key}
+
+    volumes:
+      pantry-data:
+    EOF
+  - cd /opt/pantry-bot && docker compose up -d
+
+  # The pantry-bot application container itself is intentionally NOT started
+  # here. It's added to docker-compose.yml by the leader-election sidecar
+  # once this host actually wins the lease — see pantry-bot's failover
+  # design. Starting it unconditionally at boot would defeat the whole
+  # point of leader election.

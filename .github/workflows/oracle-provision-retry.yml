@@ -1,0 +1,62 @@
+name: Oracle primary - provision retry
+
+# OCI's Always-Free Ampere A1 capacity is contested; instance creation
+# routinely fails with "Out of host capacity" and the only real fix is
+# "keep trying." This workflow is that retry loop, running for free on a
+# public repo's unlimited Actions minutes, until the VM exists — then it
+# disables itself so it stops bothering anyone.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: oracle-provision
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/oracle-primary
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_R2_BUCKET }}" \
+            -backend-config="endpoint=${{ secrets.TF_STATE_R2_ENDPOINT }}" \
+            -backend-config="access_key=${{ secrets.TF_STATE_R2_ACCESS_KEY_ID }}" \
+            -backend-config="secret_key=${{ secrets.TF_STATE_R2_SECRET_ACCESS_KEY }}" \
+            -backend-config="region=auto"
+
+      - name: Retry plan/apply
+        id: retry
+        env:
+          TF_VAR_oci_tenancy_ocid:              ${{ secrets.OCI_TENANCY_OCID }}
+          TF_VAR_oci_user_ocid:                 ${{ secrets.OCI_USER_OCID }}
+          TF_VAR_oci_fingerprint:               ${{ secrets.OCI_FINGERPRINT }}
+          TF_VAR_oci_private_key:               ${{ secrets.OCI_PRIVATE_KEY }}
+          TF_VAR_oci_region:                    ${{ secrets.OCI_REGION }}
+          TF_VAR_compartment_ocid:              ${{ secrets.OCI_COMPARTMENT_OCID }}
+          TF_VAR_ssh_public_key:                ${{ secrets.PANTRY_BOT_SSH_PUBLIC_KEY }}
+          TF_VAR_cloudflare_tunnel_token:       ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+          TF_VAR_litestream_access_key_id:      ${{ secrets.LITESTREAM_R2_ACCESS_KEY_ID }}
+          TF_VAR_litestream_secret_access_key:  ${{ secrets.LITESTREAM_R2_SECRET_ACCESS_KEY }}
+        run: ../../scripts/retry-provision.sh .
+
+      - name: Disable this workflow now that provisioning succeeded
+        if: steps.retry.outputs.provisioned == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow disable "Oracle primary - provision retry" \
+            --repo "${{ github.repository }}"
+          echo "::notice::Oracle primary VM provisioned. This retry workflow has disabled itself — re-enable it manually (Actions tab) if you ever need to recreate the instance from scratch."
