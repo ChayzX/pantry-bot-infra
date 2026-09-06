@@ -7,8 +7,10 @@ not the bot's application code (that's `ChayzX/pantry-bot`).
 
 - `terraform/oracle-primary/` — the Oracle Cloud Always-Free Ampere A1 (ARM) VM that
   is meant to become the bot's primary host.
-- `terraform/gcp-standby/` — the GCP Always-Free e2-micro VM that runs as the
-  failover standby (see `chayzx/pantry-bot`'s leader-election design).
+- `terraform/gcp-standby/` — GCP Always-Free e2-micro VM stack. **Written but
+  INACTIVE BY DESIGN — read `terraform/gcp-standby/STATUS.md` before touching
+  this directory.** The active failover pair is home + Oracle only; GCP was
+  deliberately dropped, not missed or half-finished.
 - `.github/workflows/` — CI for `terraform fmt`/`validate`/`plan`, plus a scheduled
   workflow that retries provisioning the Oracle VM until OCI has capacity.
 - `docs/` — architecture and setup notes, including how this interacts with
@@ -47,8 +49,10 @@ Same as `chayzx/pantry-bot`: work is tracked as GitHub Issues in this repo (or i
 ## Do not
 
 - Do not commit secrets, ever, even temporarily "to test something."
-- Do not run `terraform apply` against `gcp-standby` if a box already exists there
-  outside Terraform's state — import first.
+- Do not run `terraform apply` (or the `gcp-standby-apply.yml` workflow)
+  against `gcp-standby` without the user explicitly asking for GCP to rejoin
+  the active failover set — it's off on purpose, see its `STATUS.md`. If a
+  box already exists there outside Terraform's state, import first regardless.
 - Do not remove the OCI-capacity retry workflow's soft-fail handling for expected
   "Out of host capacity" errors — that's intentional, not a bug (see
   `docs/DEPLOYMENT-PIPELINE-IMPACT.md`).

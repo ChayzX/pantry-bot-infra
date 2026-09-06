@@ -45,7 +45,14 @@ two purposes.
    capacity" the first several/many times — that's the retry loop working as
    designed, not a bug. It disables itself automatically once it succeeds.
 
-## 3. GCP (standby)
+## 3. GCP (standby) — INACTIVE BY DESIGN, skip this unless told otherwise
+
+**Status: intentionally not part of the active failover set.** GCP was
+dropped in favor of a plain home + Oracle pair once Oracle became the target
+primary — see `terraform/gcp-standby/STATUS.md` and
+`docs/ARCHITECTURE.md`. This section is left here for if/when that decision
+changes, not because setup is incomplete. Do not work through these steps
+proactively; confirm with the user first.
 
 If you already have a GCP e2-micro box running manually from earlier
 planning, **do not run a plain apply** — you'll create a duplicate that

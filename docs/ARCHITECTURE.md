@@ -28,6 +28,18 @@
      both VMs here are cloud-init'd as *disposable*: neither one's local disk
      is the source of truth.
 
+## GCP standby: dropped from the active design, on purpose
+
+Earlier planning included GCP's Always-Free e2-micro as a third failover leg
+(home + GCP + Oracle). Once Oracle was picked as the target permanent
+primary, that third leg stopped earning its complexity — it was only ever a
+stopgap standby from before Oracle was in the picture. **Confirmed decision:
+the active failover set is home + Oracle only.** The `terraform/gcp-standby/`
+stack is left in the repo, fully written, deliberately unused — see
+`terraform/gcp-standby/STATUS.md`. If you're reading this repo fresh and
+wondering whether GCP support is half-finished: it isn't. It's finished and
+intentionally off.
+
 ## Why home stays in the loop for now
 
 Per current plan: home keeps running as a second failover target alongside
@@ -42,20 +54,23 @@ lease-checking replicas), not an infra-repo change.
 ```
                      ┌─────────────────────────┐
                      │   Cloudflare Tunnel      │
-                     │ (single tunnel, 3        │
+                     │ (single tunnel, 2        │
                      │  replicas connected)     │
                      └───────────┬─────────────┘
-              ┌────────────────┼─────────────────┐
-              │                │                  │
-       ┌──────▼──────┐  ┌──────▼──────┐   ┌───────▼───────┐
-       │ Home PC     │  │ GCP e2-micro│   │ Oracle A1 ARM │
-       │ (existing,  │  │ (standby,   │   │ (primary,     │
-       │  unmanaged  │  │  this repo) │   │  this repo)   │
-       │  by TF)     │  │             │   │               │
-       └──────┬──────┘  └──────┬──────┘   └───────┬───────┘
-              │                │                  │
-              └────────────────┴──────────────────┘
-                     all watch the same
+                    ┌────────────┴─────────────┐
+                    │                           │
+             ┌──────▼──────┐            ┌───────▼───────┐
+             │ Home PC     │            │ Oracle A1 ARM │
+             │ (existing,  │            │ (primary,     │
+             │  unmanaged  │            │  this repo)   │
+             │  by TF)     │            │               │
+             └──────┬──────┘            └───────┬───────┘
+                    │                           │
+                    └─────────────┬─────────────┘
+                     both watch the same
                   R2 lease object + Litestream
                        replica of pantry.db
+
+  (GCP e2-micro standby: written, INACTIVE BY DESIGN — not part of this
+   diagram on purpose. See terraform/gcp-standby/STATUS.md.)
 ```

@@ -7,8 +7,11 @@ Terraform + CI for Pantry Bot's cloud hosting.
   shape is contested, so `.github/workflows/oracle-provision-retry.yml`
   retries provisioning on a schedule until OCI has room, then disables
   itself.
-- **`terraform/gcp-standby/`** — GCP Always-Free e2-micro VM, the failover
-  standby.
+- **`terraform/gcp-standby/`** — GCP Always-Free e2-micro VM. **Status:
+  inactive by design, not deployed** — see
+  [`terraform/gcp-standby/STATUS.md`](terraform/gcp-standby/STATUS.md) before
+  assuming this was missed or is in progress. The active failover pair is
+  home + Oracle.
 - **`terraform/modules/bot-host-init/`** — shared cloud-init used by both
   stacks: Docker, `cloudflared` (joins the existing Cloudflare Tunnel as a
   replica), Watchtower (existing GHCR auto-deploy pipeline), and Litestream.
