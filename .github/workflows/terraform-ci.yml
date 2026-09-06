@@ -21,6 +21,10 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.9.8"
+          # The default wrapper this action installs always exits 0
+          # regardless of terraform's real exit code, which would make a
+          # genuine fmt/validate failure misreport as a green check.
+          terraform_wrapper: false
 
       - name: terraform fmt check
         run: terraform fmt -check -recursive ../..

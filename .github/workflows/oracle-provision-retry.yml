@@ -15,6 +15,10 @@ concurrency:
   group: oracle-provision
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: write # needed to self-disable once provisioning succeeds
+
 jobs:
   provision:
     runs-on: ubuntu-latest
@@ -27,6 +31,12 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.9.8"
+          # CRITICAL: the default wrapper this action installs always exits 0,
+          # regardless of terraform's real exit code -- which silently breaks
+          # `-detailed-exitcode`-based retry logic (every plan looks like "no
+          # changes needed" even when there are real changes pending). Must be
+          # false for retry-provision.sh's exit-code checks to mean anything.
+          terraform_wrapper: false
 
       - name: terraform init
         run: |
