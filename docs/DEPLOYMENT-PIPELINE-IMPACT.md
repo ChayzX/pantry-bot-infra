@@ -35,22 +35,26 @@ that's 100% `pantry-bot` + `k8s-homelab`'s existing, working system.
   **not** install Docker Compose, Watchtower, or run the bot directly — all
   of that is superseded by "it's now a k8s node, k8s schedules pods onto it."
 
-## What still needs to change, and where (not in this repo)
+## What changed elsewhere to make the second node actually useful (done, not pending)
 
-For the bot to actually benefit from having two nodes (rather than just
-having spare capacity sitting there), two changes are needed in
-`k8s-homelab`, tracked separately:
+Three changes landed outside this repo, none of which this repo's own
+pipeline needed to know about:
 
-1. **`pantry-bot/30-pvc.yaml` + `40-deployment.yaml`**: replace the
-   `local-path` PVC (pins the pod to the home node) with an `emptyDir` plus
-   a Litestream restore-on-start init step, so the Deployment can actually
-   be rescheduled onto Oracle if home goes down. Until this lands, having a
-   second node doesn't add failover for the bot specifically — the pod
-   simply can't move.
-2. **`pantry-bot/60-deployment-cloudflared.yaml`**: bump `cloudflared` to 2
-   replicas with pod anti-affinity, so one lands on each node. This one's
-   lower-risk (cloudflared is stateless) and gives HTTP-surface redundancy
-   immediately once both nodes exist.
+1. **`k8s-homelab`, `pantry-bot/30-pvc.yaml` → `40-deployment.yaml`**: the
+   `local-path` PVC (pinned the pod to the home node) was replaced with an
+   `emptyDir` plus a Litestream restore-on-start init step. Proven with a
+   real failover test, not just deployed — see `k8s-homelab#177`'s closing
+   comment.
+2. **`k8s-homelab`, `pantry-bot/60-deployment-cloudflared.yaml`**: bumped to
+   2 replicas with pod anti-affinity, one per node. Also proven — the
+   previously-Pending replica scheduled and served traffic the moment Oracle
+   existed.
+3. **`pantry-bot`'s own `deploy.yml`**: the build step now produces
+   multi-arch images (`linux/amd64,linux/arm64`), with a CI check that fails
+   loudly if a platform is ever missing again. This one wasn't optional —
+   the first real deploy after Oracle joined caused a full outage without
+   it. See `pantry-bot#127` (the incident) and `#128` (the fix). Full
+   writeup in `docs/ARCHITECTURE.md`'s "images must be multi-arch" section.
 
 ## One thing to watch for with cloud-init specifically
 

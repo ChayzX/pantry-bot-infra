@@ -80,12 +80,22 @@ If you don't have one yet, add these repository secrets and run
 - Reuses `CLOUDFLARE_TUNNEL_TOKEN`, `LITESTREAM_R2_ACCESS_KEY_ID`,
   `LITESTREAM_R2_SECRET_ACCESS_KEY` from step 2.
 
-## 4. After the Oracle node joins
+## 4. After the Oracle node joins (done — kept here for a from-scratch rebuild)
 
 This repo's job stops at "the node exists and is a `Ready` member of the k3s
 cluster." Getting the bot to actually benefit from a second node (real
-failover, not just spare capacity) requires the PVC→emptyDir+Litestream
-change and the cloudflared replica/anti-affinity change, both tracked as
-`k8s-homelab` PRs — see `docs/DEPLOYMENT-PIPELINE-IMPACT.md`. Nothing
-further to do in *this* repo until you want to resize, recreate, or add
-another node.
+failover, not just spare capacity) required the PVC→emptyDir+Litestream
+change, the cloudflared replica/anti-affinity change, and — the one that
+actually caused an outage the first time — building the bot's image for
+arm64 too. All three are done and proven; see `docs/DEPLOYMENT-PIPELINE-IMPACT.md`
+and `docs/ARCHITECTURE.md` for the record. If you're rebuilding this node
+from scratch (`terraform destroy` + apply), those changes already live in
+`k8s-homelab`/`pantry-bot` and don't need to be redone — the new node just
+needs to join a cluster and pull images that already support it.
+
+## 5. Ongoing: don't let this quietly start costing money
+
+See `docs/ORACLE-BILLING-SAFETY.md` for the Always Free compliance check and
+budget/notification setup — not a one-time setup step, something worth
+re-checking periodically since Oracle has changed Always Free limits before
+without much notice (see `ampere_ocpus`'s variable description).

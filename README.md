@@ -2,6 +2,10 @@
 
 Terraform + CI for Pantry Bot's cloud hosting.
 
+**Status: live.** The Oracle node is provisioned, joined, and has passed a
+real cross-node failover test (see `docs/ARCHITECTURE.md`). Not a
+plan-in-progress.
+
 - **`terraform/oracle-primary/`** — Oracle Cloud Always-Free Ampere A1 (ARM)
   VM, joined to the existing home k3s cluster as an **agent node** over
   Tailscale (not a standalone Docker host — see revision note in
