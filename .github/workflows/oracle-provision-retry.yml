@@ -47,9 +47,9 @@ jobs:
           TF_VAR_oci_region:                    ${{ secrets.OCI_REGION }}
           TF_VAR_compartment_ocid:              ${{ secrets.OCI_COMPARTMENT_OCID }}
           TF_VAR_ssh_public_key:                ${{ secrets.PANTRY_BOT_SSH_PUBLIC_KEY }}
-          TF_VAR_cloudflare_tunnel_token:       ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
-          TF_VAR_litestream_access_key_id:      ${{ secrets.LITESTREAM_R2_ACCESS_KEY_ID }}
-          TF_VAR_litestream_secret_access_key:  ${{ secrets.LITESTREAM_R2_SECRET_ACCESS_KEY }}
+          TF_VAR_tailscale_auth_key:            ${{ secrets.TAILSCALE_AUTH_KEY }}
+          TF_VAR_k3s_url:                       ${{ secrets.K3S_URL }}
+          TF_VAR_k3s_token:                     ${{ secrets.K3S_TOKEN }}
         run: ../../scripts/retry-provision.sh .
 
       - name: Disable this workflow now that provisioning succeeded

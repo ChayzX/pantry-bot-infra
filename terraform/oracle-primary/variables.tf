@@ -34,29 +34,27 @@ variable "ssh_public_key" {
   type        = string
 }
 
-variable "instance_display_name" {
-  description = "Display name for the compute instance."
-  type        = string
-  default     = "pantry-bot-primary"
-}
-
 variable "ampere_ocpus" {
   description = <<-EOT
     OCPUs for the VM.Standard.A1.Flex shape. Always Free covers up to 4 OCPUs
     total across all A1 instances in a tenancy. Smaller requests sometimes find
-    capacity faster than requesting the full 4 — the retry workflow will keep
-    trying at whatever value is set here, so start modest (this bot's workload
-    is tiny) and raise it later if you want headroom for the whole dashboard
-    stack.
+    capacity faster than requesting the full 4 — if the retry workflow runs for
+    a long time at this value with no luck, try dropping it temporarily to see
+    if a smaller shape finds room sooner, then grow it later with an in-place
+    resize once the node exists.
+
+    Defaulted to the full Always-Free ceiling (not a modest value) because
+    this node is intended to run other k8s-homelab workloads too, not just
+    the bot — see docs/ORACLE-K3S-JOIN.md.
   EOT
   type        = number
-  default     = 2
+  default     = 4
 }
 
 variable "ampere_memory_gb" {
-  description = "Memory (GB) for the VM.Standard.A1.Flex shape. Always Free covers up to 24GB total."
+  description = "Memory (GB) for the VM.Standard.A1.Flex shape. Always Free covers up to 24GB total. Defaulted to the ceiling — see ampere_ocpus."
   type        = number
-  default     = 12
+  default     = 24
 }
 
 variable "ssh_ingress_cidr" {
@@ -65,20 +63,31 @@ variable "ssh_ingress_cidr" {
   default     = "0.0.0.0/0"
 }
 
-variable "cloudflare_tunnel_token" {
-  description = "Token for the existing Cloudflare Tunnel this VM joins as an additional replica."
+variable "tailscale_auth_key" {
+  description = <<-EOT
+    Tailscale auth key this node uses to join your tailnet. Generate a
+    reusable, ephemeral-off key (Settings -> Keys) scoped to this purpose —
+    reusable so re-running cloud-init on a recreated instance doesn't need a
+    fresh key each time, ephemeral-off so the node isn't removed from the
+    tailnet if it's briefly offline.
+  EOT
   type        = string
   sensitive   = true
 }
 
-variable "litestream_access_key_id" {
-  description = "R2 access key ID used by litestream to restore/replicate the SQLite database."
+variable "k3s_url" {
+  description = "URL of the home k3s server over Tailscale, e.g. https://100.x.y.z:6443. See docs/ORACLE-K3S-JOIN.md for how to get this."
+  type        = string
+}
+
+variable "k3s_token" {
+  description = "Join token from the home k3s server (/var/lib/rancher/k3s/server/node-token). Never commit this."
   type        = string
   sensitive   = true
 }
 
-variable "litestream_secret_access_key" {
-  description = "R2 secret access key used by litestream."
+variable "node_name" {
+  description = "Name this node registers under in the cluster and in Tailscale."
   type        = string
-  sensitive   = true
+  default     = "pantry-bot-oracle"
 }

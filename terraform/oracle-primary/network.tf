@@ -45,6 +45,20 @@ resource "oci_core_security_list" "this" {
       max = 22
     }
   }
+
+  # Tailscale can operate purely on outbound-initiated connections (falling
+  # back to a relay/DERP server), but opening its direct-connection port
+  # lets it establish a peer-to-peer link to home instead of relaying k3s's
+  # pod traffic through a third party — meaningfully better latency for the
+  # cluster's cross-node network.
+  ingress_security_rules {
+    source   = "0.0.0.0/0"
+    protocol = "17" # UDP
+    udp_options {
+      min = 41641
+      max = 41641
+    }
+  }
 }
 
 resource "oci_core_subnet" "this" {

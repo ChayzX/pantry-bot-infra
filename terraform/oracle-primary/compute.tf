@@ -15,7 +15,7 @@ data "oci_core_images" "ubuntu_arm" {
 resource "oci_core_instance" "primary" {
   compartment_id      = var.compartment_ocid
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
-  display_name        = var.instance_display_name
+  display_name        = var.node_name
   shape               = "VM.Standard.A1.Flex"
 
   shape_config {
@@ -36,12 +36,12 @@ resource "oci_core_instance" "primary" {
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
     user_data = base64encode(templatefile(
-      "${path.module}/../modules/bot-host-init/cloud-init.yaml.tftpl",
+      "${path.module}/../modules/k3s-agent-init/cloud-init.yaml.tftpl",
       {
-        role                         = "primary"
-        cloudflare_tunnel_token      = var.cloudflare_tunnel_token
-        litestream_access_key_id     = var.litestream_access_key_id
-        litestream_secret_access_key = var.litestream_secret_access_key
+        node_name          = var.node_name
+        tailscale_auth_key = var.tailscale_auth_key
+        k3s_url            = var.k3s_url
+        k3s_token          = var.k3s_token
       }
     ))
   }

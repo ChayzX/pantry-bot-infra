@@ -34,16 +34,19 @@ two purposes.
    - `OCI_PRIVATE_KEY` — paste the full PEM including
      `-----BEGIN PRIVATE KEY-----` / `-----END-----` lines
    - `PANTRY_BOT_SSH_PUBLIC_KEY` — a public key you'll use to SSH into the box
-   - `CLOUDFLARE_TUNNEL_TOKEN` — from your existing Cloudflare Tunnel
-   - `LITESTREAM_R2_ACCESS_KEY_ID` / `LITESTREAM_R2_SECRET_ACCESS_KEY` — a
-     *separate* R2 token scoped only to the Litestream replica path,
-     narrower than the Terraform-state token above (don't reuse the same
-     credential for two different blast radii)
-5. Trigger `.github/workflows/oracle-provision-retry.yml` manually once
+5. **Before triggering the workflow**, complete the home-side k3s/Tailscale
+   prep in `docs/ORACLE-K3S-JOIN.md` — this node joins your existing k3s
+   cluster as an agent, it isn't a standalone Docker host, so it needs
+   `TAILSCALE_AUTH_KEY`, `K3S_URL`, and `K3S_TOKEN` as repository secrets
+   (that doc explains where each one comes from) before it can join
+   successfully.
+6. Trigger `.github/workflows/oracle-provision-retry.yml` manually once
    (Actions tab → Run workflow) to confirm the config is valid before
    leaving it on the 15-minute schedule. Expect it to fail with "Out of host
    capacity" the first several/many times — that's the retry loop working as
    designed, not a bug. It disables itself automatically once it succeeds.
+   Once it does, confirm with `kubectl get nodes -o wide` from the home
+   server that the new node shows `Ready`.
 
 ## 3. GCP (standby) — INACTIVE BY DESIGN, skip this unless told otherwise
 
@@ -77,10 +80,12 @@ If you don't have one yet, add these repository secrets and run
 - Reuses `CLOUDFLARE_TUNNEL_TOKEN`, `LITESTREAM_R2_ACCESS_KEY_ID`,
   `LITESTREAM_R2_SECRET_ACCESS_KEY` from step 2.
 
-## 4. After both VMs exist
+## 4. After the Oracle node joins
 
-This repo's job stops at "VM exists, Docker + cloudflared + Watchtower +
-Litestream are running on it." From there, `chayzx/pantry-bot`'s
-leader-election work is what actually starts the bot on whichever host wins
-the lease — see that repo's failover milestone. Nothing further to do here
-until you want to resize, recreate, or add a third host.
+This repo's job stops at "the node exists and is a `Ready` member of the k3s
+cluster." Getting the bot to actually benefit from a second node (real
+failover, not just spare capacity) requires the PVC→emptyDir+Litestream
+change and the cloudflared replica/anti-affinity change, both tracked as
+`k8s-homelab` PRs — see `docs/DEPLOYMENT-PIPELINE-IMPACT.md`. Nothing
+further to do in *this* repo until you want to resize, recreate, or add
+another node.
