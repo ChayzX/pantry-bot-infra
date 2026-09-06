@@ -102,11 +102,14 @@ deliberately:
 kubectl label node pantry-bot-oracle topology.kubernetes.io/region=cloud
 ```
 
-## What this does NOT do yet
+## What this does NOT do
 
-Joining the node doesn't move the bot onto it or make it schedulable across
-both nodes automatically — the bot's Deployment currently pins itself to
-home via a `local-path` PVC (node-local storage). That change (PVC →
-`emptyDir` + Litestream restore-on-start, so the pod can actually reschedule
-onto Oracle if home goes down) lives in `k8s-homelab`'s `pantry-bot/`
-manifests, not here — see that repo's PR for this migration.
+Joining the node only makes it a schedulable member of the cluster — it
+doesn't by itself move the bot or make it resilient to a node going down.
+That required separate changes in `k8s-homelab`'s `pantry-bot/` manifests
+(PVC → `emptyDir` + Litestream restore-on-start so the pod can actually
+reschedule onto Oracle, plus a multi-arch bot image so it can even run on
+arm64) and in `pantry-bot`'s own build pipeline. Those are done now — see
+`docs/ARCHITECTURE.md` for the proven, tested result — but they don't live
+in this repo, so a from-scratch rebuild of just this node doesn't need to
+redo them.
