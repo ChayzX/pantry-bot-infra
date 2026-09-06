@@ -15,7 +15,10 @@ and lets Kubernetes itself do the failover.
 
 1. **Where the bot runs long-term.** Target end state: the Oracle Cloud
    Always Free Ampere A1 (ARM) VM joins the home k3s cluster as a node with
-   real headroom (defaulted to the full 4 OCPU/24GB Always-Free ceiling),
+   real headroom (defaulted to the 2 OCPU/12GB Always-Free ceiling — Oracle
+   cut this from 4 OCPU/24GB on 2026-06-15; verify your own tenancy's actual
+   current limit before raising it, see `ampere_ocpus`'s variable
+   description),
    both to run the bot and to take on other `k8s-homelab` workloads. Reasoning
    for Oracle over GCP as primary is in `chayzx/pantry-bot`'s planning
    history — short version: GCP's Always Free egress cap (1GB/month) is fine

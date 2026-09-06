@@ -36,25 +36,35 @@ variable "ssh_public_key" {
 
 variable "ampere_ocpus" {
   description = <<-EOT
-    OCPUs for the VM.Standard.A1.Flex shape. Always Free covers up to 4 OCPUs
-    total across all A1 instances in a tenancy. Smaller requests sometimes find
-    capacity faster than requesting the full 4 — if the retry workflow runs for
-    a long time at this value with no luck, try dropping it temporarily to see
-    if a smaller shape finds room sooner, then grow it later with an in-place
-    resize once the node exists.
+    OCPUs for the VM.Standard.A1.Flex shape.
 
-    Defaulted to the full Always-Free ceiling (not a modest value) because
-    this node is intended to run other k8s-homelab workloads too, not just
-    the bot — see docs/ORACLE-K3S-JOIN.md.
+    IMPORTANT: Oracle cut the Always Free Ampere A1 allowance on 2026-06-15
+    from 4 OCPU/24GB down to 2 OCPU/12GB total per tenancy. Verify your own
+    tenancy's current limit (Governance & Administration -> Limits, Quotas
+    and Usage -> filter on "VM.Standard.A1.Flex") before raising this —
+    requesting more than your tenancy's actual Always Free ceiling either
+    fails outright or, worse, silently starts billing as a paid shape.
+    Defaulted to 2 here to match the post-cut ceiling; only raise it after
+    confirming your tenancy's real limit.
+
+    Smaller requests sometimes find capacity faster than requesting the full
+    amount — if the retry workflow runs for a long time with no luck, try
+    dropping this further temporarily, then grow it later with an in-place
+    resize once the node exists.
   EOT
   type        = number
-  default     = 4
+  default     = 2
 }
 
 variable "ampere_memory_gb" {
-  description = "Memory (GB) for the VM.Standard.A1.Flex shape. Always Free covers up to 24GB total. Defaulted to the ceiling — see ampere_ocpus."
+  description = <<-EOT
+    Memory (GB) for the VM.Standard.A1.Flex shape. Defaulted to 12 to match
+    the post-2026-06-15 Always Free ceiling (2 OCPU/12GB total per tenancy,
+    down from 4 OCPU/24GB) — see ampere_ocpus for why this matters and how
+    to verify your own tenancy's actual limit before raising it.
+  EOT
   type        = number
-  default     = 24
+  default     = 12
 }
 
 variable "ssh_ingress_cidr" {
