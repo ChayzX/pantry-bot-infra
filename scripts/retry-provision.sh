@@ -3,10 +3,31 @@
 # transient OCI capacity errors as "try again later" rather than a failure.
 # Called from .github/workflows/oracle-provision-retry.yml on a schedule —
 # this script does not loop itself, the schedule is the loop.
+#
+# Pass --replace as a second argument to force the compute instance to be
+# recreated (e.g. after a first-boot cloud-init failure) using the exact
+# same stored secrets — no need to re-enter any credentials by hand.
 set -euo pipefail
 
-STACK_DIR="${1:?usage: retry-provision.sh <stack-dir>}"
+STACK_DIR="${1:?usage: retry-provision.sh <stack-dir> [--replace]}"
+REPLACE_FLAG="${2:-}"
 cd "$STACK_DIR"
+
+if [ "$REPLACE_FLAG" = "--replace" ]; then
+  echo "== terraform apply -replace (forced recreate) =="
+  set +e
+  APPLY_OUTPUT=$(terraform apply -replace=oci_core_instance.primary -auto-approve -input=false -no-color 2>&1)
+  APPLY_EXIT=$?
+  set -e
+  echo "$APPLY_OUTPUT"
+  if [ "$APPLY_EXIT" -eq 0 ]; then
+    echo "Instance recreated successfully."
+    echo "provisioned=true" >>"${GITHUB_OUTPUT:-/dev/null}"
+    exit 0
+  fi
+  echo "Unexpected Terraform error during forced replace — failing the job so it's visible." >&2
+  exit 1
+fi
 
 echo "== terraform plan =="
 set +e

@@ -9,33 +9,53 @@
 # on (home must already be running Tailscale and have
 # --flannel-backend=wireguard-native enabled) — none of that can be done
 # from here, since home isn't managed by this repo.
+#
+# NOT using `packages:`/`package_update` here deliberately — a first-boot
+# `apt-get update` raced against OCI's networking (VCN/IGW/route table,
+# all created in the same apply as the instance) still propagating and
+# failed outright on the first real run of this module. curl is already
+# present on the base Ubuntu image, so there's nothing to install via apt
+# at all; skipping it sidesteps that race entirely rather than working
+# around it.
 
-package_update: true
-package_upgrade: false
+write_files:
+  - path: /opt/join-cluster.sh
+    permissions: "0700"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
 
-packages:
-  - curl
+      # Wait for real outbound connectivity before doing anything that needs
+      # it. First boot can otherwise race OCI's networking layer (VCN/IGW/
+      # route table) still propagating — observed directly: every request
+      # failed with "Network is unreachable" in the first ~20s of boot.
+      # Bounded at 2 minutes; if the network genuinely never comes up, fail
+      # loudly rather than silently doing nothing (a bare cloud-init runcmd
+      # failure is easy to miss; this at least fails one clearly-named unit).
+      for i in $(seq 1 24); do
+        if curl -fsS --max-time 5 https://pkgs.tailscale.com/ >/dev/null 2>&1; then
+          break
+        fi
+        echo "waiting for network... attempt $i/24"
+        sleep 5
+      done
+
+      curl -fsSL https://tailscale.com/install.sh | sh
+      tailscale up --authkey=${tailscale_auth_key} --hostname=${node_name} --accept-routes
+
+      # Must happen in the SAME script as the k3s install below --
+      # cloud-init's `runcmd` list runs each entry as its own separate
+      # process, so an `export` in one list item never reaches the next one.
+      TS_IP=$(tailscale ip -4)
+      echo "joining k3s cluster with node-ip=$TS_IP"
+
+      curl -sfL https://get.k3s.io | \
+        K3S_URL=${k3s_url} K3S_TOKEN=${k3s_token} \
+        INSTALL_K3S_EXEC="agent --node-ip=$TS_IP --node-name=${node_name} --flannel-iface=tailscale0" \
+        sh -
 
 runcmd:
-  # --- Tailscale: the private network k3s's pod overlay will ride on ---
-  - curl -fsSL https://tailscale.com/install.sh | sh
-  - tailscale up --authkey=${tailscale_auth_key} --hostname=${node_name} --accept-routes
-
-  # k3s needs this node's OWN tailscale IP (assigned above, not knowable
-  # before `tailscale up` runs) to bind the agent's node-ip and to confine
-  # pod-network traffic to the tailscale0 interface rather than the public
-  # NIC.
-  - export TS_IP=$(tailscale ip -4)
-
-  # --- k3s agent join ---
-  # K3S_URL/K3S_TOKEN come from the home server (docs/ORACLE-K3S-JOIN.md).
-  # --flannel-iface=tailscale0 is what makes the pod network span the WAN
-  # link safely — without it k3s tries to route pod traffic over the
-  # public interface, which doesn't reach the home server at all.
-  - >
-    curl -sfL https://get.k3s.io | K3S_URL=${k3s_url} K3S_TOKEN=${k3s_token}
-    INSTALL_K3S_EXEC="agent --node-ip=$TS_IP --node-name=${node_name}
-    --flannel-iface=tailscale0" sh -
+  - /opt/join-cluster.sh
 
   # Nothing else starts here. The bot, its cloudflared replica, and
   # Litestream are all pods — they get scheduled onto this node by k8s

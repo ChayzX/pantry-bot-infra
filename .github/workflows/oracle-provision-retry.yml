@@ -9,7 +9,15 @@ name: Oracle primary - provision retry
 on:
   schedule:
     - cron: "*/15 * * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      replace_instance:
+        description: >-
+          Force-recreate the compute instance (e.g. after a first-boot
+          cloud-init failure) using the same stored secrets. Leave false for
+          a normal provisioning attempt.
+        type: boolean
+        default: false
 
 concurrency:
   group: oracle-provision
@@ -60,7 +68,9 @@ jobs:
           TF_VAR_tailscale_auth_key:            ${{ secrets.TAILSCALE_AUTH_KEY }}
           TF_VAR_k3s_url:                       ${{ secrets.K3S_URL }}
           TF_VAR_k3s_token:                     ${{ secrets.K3S_TOKEN }}
-        run: ../../scripts/retry-provision.sh .
+        run: >-
+          ../../scripts/retry-provision.sh .
+          ${{ inputs.replace_instance && '--replace' || '' }}
 
       - name: Disable this workflow now that provisioning succeeded
         if: steps.retry.outputs.provisioned == 'true'
