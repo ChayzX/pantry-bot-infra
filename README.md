@@ -2,9 +2,8 @@
 
 Terraform + CI for Pantry Bot's cloud hosting.
 
-**Status: live.** The Oracle node is provisioned, joined, and has passed a
-real cross-node failover test (see `docs/ARCHITECTURE.md`). Not a
-plan-in-progress.
+**Status: live.** The Oracle node is provisioned and is where PantryBot runs.
+PantryBot runs ONLY on the Oracle Cloud node (single-site since 2026-09-25). There is no home-cluster, Canada or GCP PantryBot runtime, standby, witness or failover. Observability for it is self-hosted Grafana/Prometheus/Loki (namespace `observability` on minecraftmachine); Grafana Cloud is no longer used.
 
 - **`terraform/oracle-primary/`** — Oracle Cloud Always-Free Ampere A1 (ARM)
   VM, joined to the existing home k3s cluster as an **agent node** over
@@ -17,8 +16,8 @@ plan-in-progress.
 - **`terraform/gcp-standby/`** — GCP Always-Free e2-micro VM. **Status:
   inactive by design, not deployed** — see
   [`terraform/gcp-standby/STATUS.md`](terraform/gcp-standby/STATUS.md) before
-  assuming this was missed or is in progress. The active failover pair is
-  home + Oracle.
+  assuming this was missed or is in progress. PantryBot has no GCP runtime,
+  standby or failover; it runs only on Oracle.
 - **`terraform/modules/k3s-agent-init/`** — cloud-init used by
   `oracle-primary`: installs Tailscale, joins the tailnet, then joins the
   home k3s cluster as an agent. Does not install Docker Compose or start the

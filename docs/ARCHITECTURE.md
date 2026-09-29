@@ -1,6 +1,15 @@
 # Architecture
 
-## Status: this design is live and proven, not aspirational
+## Current state
+
+PantryBot runs ONLY on the Oracle Cloud node (single-site since 2026-09-25). There is no home-cluster, Canada or GCP PantryBot runtime, standby, witness or failover. Observability for it is self-hosted Grafana/Prometheus/Loki (namespace `observability` on minecraftmachine); Grafana Cloud is no longer used.
+
+Everything below the next heading is a dated record of the 2026-09 design in
+which the Oracle node was a second node beside home and PantryBot could fail
+over between them. That failover topology is retired; read it as history. For
+current cluster layout and manifests see `chayzx/k8s-homelab`.
+
+## Historical (pre-2026-09-25): this two-node design was live and proven
 
 Earlier versions of this doc described a standalone-Docker design: separate
 host-level `cloudflared` + Watchtower + Litestream containers on each VM,
@@ -82,26 +91,25 @@ bridges the two over an encrypted mesh regardless of NAT/CGNAT on either
 side — see `docs/ORACLE-K3S-JOIN.md` for the exact setup, including the
 home-side k3s server changes this repo can't make for you.
 
-## GCP standby: dropped from the active design, on purpose
+## GCP standby: dropped, on purpose
 
-Earlier planning included GCP's Always-Free e2-micro as a third failover leg
+Historical: earlier planning included GCP's Always-Free e2-micro as a third failover leg
 (home + GCP + Oracle). Once Oracle was picked as the target permanent
 primary, that third leg stopped earning its complexity. **Confirmed
-decision: the active failover set is home + Oracle only.** The
+decision: GCP is not part of PantryBot hosting (PantryBot is now Oracle-only).** The
 `terraform/gcp-standby/` stack is left in the repo, fully written,
 deliberately unused — see `terraform/gcp-standby/STATUS.md`. If you're
 reading this repo fresh and wondering whether GCP support is half-finished:
 it isn't. It's finished and intentionally off.
 
-## Why home stays in the loop for now
+## Home is no longer a PantryBot host
 
-Per current plan: home keeps running as a cluster node while you confirm
-Oracle is stable over real production use, not just one manual failover
-test. Nothing here assumes home goes away — once you're confident, retiring
-home is a matter of draining/removing that node from the cluster, not an
-infra-repo change.
+Historical: home originally stayed in the cluster as a second PantryBot host
+while Oracle proved stable. That period ended on 2026-09-25: PantryBot now
+runs only on Oracle, and home is not a PantryBot runtime, standby or failover
+target.
 
-## Diagram
+## Diagram (historical two-node design; PantryBot now runs only on the Oracle node)
 
 ```
                          ┌──────────────────────────┐
@@ -128,6 +136,7 @@ infra-repo change.
      replica into a fresh emptyDir rather than relying on a node-pinned PVC.
      PROVEN, not theoretical -- see k8s-homelab#177's closing comment.
 
+  (Historical diagram. Today PantryBot runs only on the Oracle node.)
   (GCP e2-micro standby: written, INACTIVE BY DESIGN — not part of this
    diagram on purpose. See terraform/gcp-standby/STATUS.md.)
 ```

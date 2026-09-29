@@ -5,14 +5,17 @@ not the bot's application code (that's `ChayzX/pantry-bot`).
 
 ## What lives here
 
+Current state: PantryBot runs ONLY on the Oracle Cloud node (single-site since 2026-09-25). There is no home-cluster, Canada or GCP PantryBot runtime, standby, witness or failover. Observability for it is self-hosted Grafana/Prometheus/Loki (namespace `observability` on minecraftmachine); Grafana Cloud is no longer used.
+
+
 - `terraform/oracle-primary/` — the Oracle Cloud Always-Free Ampere A1 (ARM) VM,
   joined to the existing home k3s cluster as an **agent node** over Tailscale.
   Not a standalone Docker host — see `docs/ARCHITECTURE.md`'s revision note
   and `docs/ORACLE-K3S-JOIN.md` before assuming otherwise.
 - `terraform/gcp-standby/` — GCP Always-Free e2-micro VM stack. **Written but
   INACTIVE BY DESIGN — read `terraform/gcp-standby/STATUS.md` before touching
-  this directory.** The active failover pair is home + Oracle only; GCP was
-  deliberately dropped, not missed or half-finished. Still uses the older
+  this directory.** PantryBot runs only on Oracle (no failover pair, standby or
+  GCP runtime); GCP was deliberately dropped, not missed or half-finished. Still uses the older
   standalone-Docker design (`bot-host-init` module) — that hasn't been
   revisited since GCP is inactive.
 - `.github/workflows/` — CI for `terraform fmt`/`validate`/`plan`, plus a scheduled
@@ -66,7 +69,7 @@ Same as `chayzx/pantry-bot`: work is tracked as GitHub Issues in this repo (or i
 - Do not commit secrets, ever, even temporarily "to test something."
 - Do not run `terraform apply` (or the `gcp-standby-apply.yml` workflow)
   against `gcp-standby` without the user explicitly asking for GCP to rejoin
-  the active failover set — it's off on purpose, see its `STATUS.md`. If a
+  PantryBot hosting — it's off on purpose, see its `STATUS.md`. If a
   box already exists there outside Terraform's state, import first regardless.
 - Do not remove the OCI-capacity retry workflow's soft-fail handling for expected
   "Out of host capacity" errors — that's intentional, not a bug (see

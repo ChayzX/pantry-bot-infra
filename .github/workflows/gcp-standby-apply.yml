@@ -1,11 +1,11 @@
 name: GCP standby - apply (INACTIVE BY DESIGN, do not run without asking)
 
 # STATUS: INACTIVE BY DESIGN — see terraform/gcp-standby/STATUS.md.
-# GCP was deliberately dropped from the active failover set (home + Oracle
-# only, confirmed with the user) once Oracle became the target primary. This
+# GCP was deliberately dropped once Oracle became the target primary;
+# PantryBot now runs only on Oracle (no standby or failover anywhere). This
 # workflow is left in place, manual-only, on purpose — not because it was
 # missed. Do not run it "to catch things up" without the user explicitly
-# asking for GCP to rejoin the active failover set.
+# asking to revive GCP hosting.
 #
 # Unlike the Oracle stack, GCP Always-Free e2-micro capacity isn't contested,
 # so this doesn't need a retry loop — it's a plain manual apply. Keeping it

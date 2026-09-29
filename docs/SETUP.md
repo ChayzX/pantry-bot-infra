@@ -50,9 +50,9 @@ two purposes.
 
 ## 3. GCP (standby) — INACTIVE BY DESIGN, skip this unless told otherwise
 
-**Status: intentionally not part of the active failover set.** GCP was
-dropped in favor of a plain home + Oracle pair once Oracle became the target
-primary — see `terraform/gcp-standby/STATUS.md` and
+**Status: intentionally not used for PantryBot.** PantryBot runs only on the
+Oracle node (single-site since 2026-09-25); GCP was dropped once Oracle became
+the target primary and there is no standby or failover anywhere — see `terraform/gcp-standby/STATUS.md` and
 `docs/ARCHITECTURE.md`. This section is left here for if/when that decision
 changes, not because setup is incomplete. Do not work through these steps
 proactively; confirm with the user first.
@@ -83,15 +83,18 @@ If you don't have one yet, add these repository secrets and run
 ## 4. After the Oracle node joins (done — kept here for a from-scratch rebuild)
 
 This repo's job stops at "the node exists and is a `Ready` member of the k3s
-cluster." Getting the bot to actually benefit from a second node (real
-failover, not just spare capacity) required the PVC→emptyDir+Litestream
+cluster." (Historical note: in the 2026-09 design, getting the bot to
+benefit from a second node for cross-node failover required the PVC→emptyDir+Litestream
 change, the cloudflared replica/anti-affinity change, and — the one that
 actually caused an outage the first time — building the bot's image for
-arm64 too. All three are done and proven; see `docs/DEPLOYMENT-PIPELINE-IMPACT.md`
-and `docs/ARCHITECTURE.md` for the record. If you're rebuilding this node
+arm64 too. All three were done and proven, and the arm64 image requirement
+still applies since PantryBot now runs only on the Oracle arm64 node; see `docs/DEPLOYMENT-PIPELINE-IMPACT.md`
+and `docs/ARCHITECTURE.md` for the record.) If you're rebuilding this node
 from scratch (`terraform destroy` + apply), those changes already live in
 `k8s-homelab`/`pantry-bot` and don't need to be redone — the new node just
 needs to join a cluster and pull images that already support it.
+PantryBot itself now runs only on this Oracle node; there is no failover
+target elsewhere.
 
 ## 5. Ongoing: don't let this quietly start costing money
 
