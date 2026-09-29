@@ -37,6 +37,8 @@ that's 100% `pantry-bot` + `k8s-homelab`'s existing, working system.
 
 ## What changed elsewhere to make the second node actually useful (done, not pending)
 
+> Historical (2026-09 two-node failover design). Since 2026-09-25 PantryBot runs only on the Oracle node; there is no cross-node failover. The multi-arch image change in item 3 still matters.
+
 Three changes landed outside this repo, none of which this repo's own
 pipeline needed to know about:
 
