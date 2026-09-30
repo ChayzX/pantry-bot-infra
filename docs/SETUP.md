@@ -34,56 +34,31 @@ two purposes.
    - `OCI_PRIVATE_KEY` — paste the full PEM including
      `-----BEGIN PRIVATE KEY-----` / `-----END-----` lines
    - `PANTRY_BOT_SSH_PUBLIC_KEY` — a public key you'll use to SSH into the box
-5. **Before triggering the workflow**, complete the home-side k3s/Tailscale
-   prep in `docs/ORACLE-K3S-JOIN.md` — this node joins your existing k3s
-   cluster as an agent, it isn't a standalone Docker host, so it needs
-   `TAILSCALE_AUTH_KEY`, `K3S_URL`, and `K3S_TOKEN` as repository secrets
-   (that doc explains where each one comes from) before it can join
-   successfully.
+5. **Before triggering the workflow**, read `docs/ORACLE-K3S-JOIN.md`. The
+   live Oracle node is an independent single-node k3s cluster, but the
+   Terraform cloud-init still runs the original k3s *agent* join, so it
+   still needs `TAILSCALE_AUTH_KEY`, `K3S_URL`, and `K3S_TOKEN` repository
+   secrets to render. On a rebuild, install k3s as a server afterwards
+   instead of relying on that join (the doc has the command).
 6. Trigger `.github/workflows/oracle-provision-retry.yml` manually once
    (Actions tab → Run workflow) to confirm the config is valid before
    leaving it on the 15-minute schedule. Expect it to fail with "Out of host
    capacity" the first several/many times — that's the retry loop working as
    designed, not a bug. It disables itself automatically once it succeeds.
-   Once it does, confirm with `kubectl get nodes -o wide` from the home
-   server that the new node shows `Ready`.
+   Once it does, confirm with `ssh oracle 'sudo -n kubectl get nodes -o wide'`
+   that `pantry-bot-oracle` shows `Ready` as the only (control-plane) node.
 
-## 3. GCP (standby) — INACTIVE BY DESIGN, skip this unless told otherwise
+## 3. GCP: not used for PantryBot
 
-**Status: intentionally not used for PantryBot.** PantryBot runs only on the
-Oracle node (single-site since 2026-09-25); GCP was dropped once Oracle became
-the target primary and there is no standby or failover anywhere — see `terraform/gcp-standby/STATUS.md` and
-`docs/ARCHITECTURE.md`. This section is left here for if/when that decision
-changes, not because setup is incomplete. Do not work through these steps
-proactively; confirm with the user first.
+The GCP standby stack was removed when the failover design was retired.
+PantryBot runs only on Oracle. The existing GCP e2-micro (`discordmusicbot`)
+is the shared failover witness for opsbot, JMusicBot and Authentik. It is not
+managed by this repo, so leave it alone.
 
-If you already have a GCP e2-micro box running manually from earlier
-planning, **do not run a plain apply** — you'll create a duplicate that
-starts costing money. Import the existing instance into Terraform state
-first:
+## 4. After the Oracle node is up (done — kept here for a from-scratch rebuild)
 
-```bash
-cd terraform/gcp-standby
-terraform init -backend-config=... # same R2 backend config as above
-terraform import google_compute_instance.standby \
-  projects/<your-project-id>/zones/<zone>/instances/<instance-name>
-terraform plan   # review carefully — should show no destructive changes
-```
-
-If you don't have one yet, add these repository secrets and run
-`.github/workflows/gcp-standby-apply.yml` manually:
-
-- `GCP_PROJECT_ID`
-- `GCP_CREDENTIALS_JSON` — a service account key JSON with Compute Admin on
-  that project (paste the whole JSON file contents)
-- `PANTRY_BOT_SSH_PUBLIC_KEY_GCP` — format `username:ssh-rsa AAAA...`
-- Reuses `CLOUDFLARE_TUNNEL_TOKEN`, `LITESTREAM_R2_ACCESS_KEY_ID`,
-  `LITESTREAM_R2_SECRET_ACCESS_KEY` from step 2.
-
-## 4. After the Oracle node joins (done — kept here for a from-scratch rebuild)
-
-This repo's job stops at "the node exists and is a `Ready` member of the k3s
-cluster." (Historical note: in the 2026-09 design, getting the bot to
+This repo's job stops at "the node exists and runs a `Ready` k3s server of
+its own." (Historical note: in the 2026-09 design, getting the bot to
 benefit from a second node for cross-node failover required the PVC→emptyDir+Litestream
 change, the cloudflared replica/anti-affinity change, and — the one that
 actually caused an outage the first time — building the bot's image for
@@ -92,7 +67,7 @@ still applies since PantryBot now runs only on the Oracle arm64 node; see `docs/
 and `docs/ARCHITECTURE.md` for the record.) If you're rebuilding this node
 from scratch (`terraform destroy` + apply), those changes already live in
 `k8s-homelab`/`pantry-bot` and don't need to be redone — the new node just
-needs to join a cluster and pull images that already support it.
+needs its own k3s server and to pull images that already support arm64.
 PantryBot itself now runs only on this Oracle node; there is no failover
 target elsewhere.
 

@@ -6,8 +6,14 @@ PantryBot runs ONLY on the Oracle Cloud node (single-site since 2026-09-25). The
 
 Everything below the next heading is a dated record of the 2026-09 design in
 which the Oracle node was a second node beside home and PantryBot could fail
-over between them. That failover topology is retired; read it as history. For
-current cluster layout and manifests see `chayzx/k8s-homelab`.
+over between them. That failover topology is retired; read it as history.
+
+Today `pantry-bot-oracle` is an **independent single-node k3s cluster** (its
+own `k3s server`), separate from the home cluster (`minecraftmachine` +
+`chasebot`). The two share only the tailnet; Oracle's Prometheus
+remote-writes to home's observability stack through `prometheus-write-gateway`.
+See `docs/ORACLE-K3S-JOIN.md`. For manifests see `chayzx/pantry-bot`'s `k8s/`
+and `chayzx/k8s-homelab`.
 
 ## Historical (pre-2026-09-25): this two-node design was live and proven
 
@@ -82,14 +88,14 @@ purpose) — this includes any other `k8s-homelab` workload you move onto
 Oracle's spare capacity, not just pantry-bot. Worth checking before adding
 anything new to this node.
 
-## Why Tailscale
+## Why Tailscale (historical: the original agent join)
 
 k3s agents need to reach the server's API (6443) and share a pod-network
 overlay with it. Home has no stable public IP (that's what Cloudflare Tunnel
 is for, and Tunnel doesn't hand you a routable cluster network). Tailscale
 bridges the two over an encrypted mesh regardless of NAT/CGNAT on either
-side — see `docs/ORACLE-K3S-JOIN.md` for the exact setup, including the
-home-side k3s server changes this repo can't make for you.
+side. Oracle has since become its own k3s cluster, so Tailscale now carries
+only SSH, CI and the metrics remote-write; see `docs/ORACLE-K3S-JOIN.md`.
 
 ## GCP standby: dropped, on purpose
 
@@ -97,10 +103,8 @@ Historical: earlier planning included GCP's Always-Free e2-micro as a third fail
 (home + GCP + Oracle). Once Oracle was picked as the target permanent
 primary, that third leg stopped earning its complexity. **Confirmed
 decision: GCP is not part of PantryBot hosting (PantryBot is now Oracle-only).** The
-`terraform/gcp-standby/` stack is left in the repo, fully written,
-deliberately unused — see `terraform/gcp-standby/STATUS.md`. If you're
-reading this repo fresh and wondering whether GCP support is half-finished:
-it isn't. It's finished and intentionally off.
+`terraform/gcp-standby/` stack and its `bot-host-init` module were removed
+when the failover design was retired; they remain in git history.
 
 ## Home is no longer a PantryBot host
 
@@ -137,6 +141,5 @@ target.
      PROVEN, not theoretical -- see k8s-homelab#177's closing comment.
 
   (Historical diagram. Today PantryBot runs only on the Oracle node.)
-  (GCP e2-micro standby: written, INACTIVE BY DESIGN — not part of this
-   diagram on purpose. See terraform/gcp-standby/STATUS.md.)
+  (The GCP e2-micro standby stack was removed; it is not part of this diagram.)
 ```

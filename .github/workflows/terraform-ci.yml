@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        stack: [oracle-primary, gcp-standby]
+        stack: [oracle-primary]
     defaults:
       run:
         working-directory: terraform/${{ matrix.stack }}
