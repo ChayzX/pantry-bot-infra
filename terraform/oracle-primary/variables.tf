@@ -86,12 +86,12 @@ variable "tailscale_auth_key" {
 }
 
 variable "k3s_url" {
-  description = "URL of the home k3s server over Tailscale, e.g. https://100.x.y.z:6443. See docs/ORACLE-K3S-JOIN.md for how to get this."
+  description = "k3s server URL the k3s-agent-init cloud-init joins (originally the home server over Tailscale, e.g. https://100.x.y.z:6443). The live node now runs its own independent k3s server; see docs/ORACLE-K3S-JOIN.md."
   type        = string
 }
 
 variable "k3s_token" {
-  description = "Join token from the home k3s server (/var/lib/rancher/k3s/server/node-token). Never commit this."
+  description = "Join token for the k3s server in k3s_url (originally the home server's /var/lib/rancher/k3s/server/node-token). Only used by the original agent-join cloud-init; see docs/ORACLE-K3S-JOIN.md. Never commit this."
   type        = string
   sensitive   = true
 }

@@ -26,12 +26,13 @@ that's 100% `pantry-bot` + `k8s-homelab`'s existing, working system.
 
 ## What this repo's automation actually does
 
-- **Oracle Terraform + the retry workflow**: creates the VM and joins it to
-  the cluster as a k3s agent node (see `docs/ORACLE-K3S-JOIN.md`). That's
-  the entire scope. Once the node is `Ready`, it's just cluster capacity —
-  the existing `deploy.yml` pipeline doesn't know or care which node a pod
-  lands on.
-- **Cloud-init on the Oracle node** installs Tailscale and joins k3s. It does
+- **Oracle Terraform + the retry workflow**: creates the VM. The live node
+  is an independent single-node k3s cluster (its own server), not a member
+  of the home cluster; see `docs/ORACLE-K3S-JOIN.md`, including the drift
+  between that and the agent-join cloud-init. PantryBot's `deploy.yml`
+  deploys straight to the Oracle cluster.
+- **Cloud-init on the Oracle node** installs Tailscale and, as written, runs
+  the original k3s agent join. It does
   **not** install Docker Compose, Watchtower, or run the bot directly — all
   of that is superseded by "it's now a k8s node, k8s schedules pods onto it."
 

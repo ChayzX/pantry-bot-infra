@@ -45,10 +45,8 @@ not after.
    real money is owed.
 2. Check Billing & Cost Management → Cost Analysis for which resource is
    generating the charge.
-3. Cross-reference against `terraform/oracle-primary/` and
-   `terraform/gcp-standby/` (should still be `terraform destroy`'d / never
-   applied — see its `STATUS.md`) to see if it's something Terraform
-   created outside the expected free-tier shape, or something created
+3. Cross-reference against `terraform/oracle-primary/` to see if it's
+   something Terraform created outside the expected free-tier shape, or something created
    manually outside Terraform entirely (the latter is the more likely
    culprit — see this repo's CLAUDE.md note about not hand-managing
    resources Terraform is supposed to own).
